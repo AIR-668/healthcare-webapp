@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Frontend - Next.js application
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Backend - FastAPI application
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./healthcare.db
+      - PYTHONPATH=/app
+    volumes:
+      - ./api:/app
+      - healthcare_data:/app/data
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Database initialization
+  db-init:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:///./healthcare.db
+      - PYTHONPATH=/app
+    volumes:
+      - ./api:/app
+      - healthcare_data:/app/data
+    command: python seed.py
+    depends_on:
+      - api
+
+volumes:
+  healthcare_data:
